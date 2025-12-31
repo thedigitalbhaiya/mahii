@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState, useRef } from 'react';
 import Confetti from './Confetti';
 import { toPng } from 'html-to-image';
@@ -10,19 +9,12 @@ interface FinalWishProps {
 const FinalWish: React.FC<FinalWishProps> = ({ onRestart }) => {
   const [showConfetti, setShowConfetti] = useState(true);
   const [isCapturing, setIsCapturing] = useState(false);
+  const [imgError, setImgError] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
 
-  // Emojis matching the screenshot
-  const ASSETS = {
-    PINK_HEART: "💗",
-    SPARKLES: "✨",
-    BOW: "🎀",
-    CHEERS: "🥂",
-    HEART_SPARKLE: "💖",
-  };
-
-  // User provided image for the centerpiece
-  const PROFILE_IMAGE = "https://images.lucidapp.io/lucidchart/63b3648a-6b58-498c-9c9e-561937446545/V0_0?width=1000";
+  // User provided image for the final reveal
+  const PROFILE_IMAGE = "https://yelling-beige-otdwf6myhv.edgeone.app/file_0000000032307209aad94d46f52251c9.png";
+  const FALLBACK_IMAGE = "https://cdn.pixabay.com/photo/2021/04/24/23/16/girl-6205216_1280.png";
 
   useEffect(() => {
     const timer = setTimeout(() => setShowConfetti(false), 6000);
@@ -38,26 +30,55 @@ const FinalWish: React.FC<FinalWishProps> = ({ onRestart }) => {
   };
 
   const handleSave = async () => {
-    if (!cardRef.current) return;
+    if (!cardRef.current || isCapturing) return;
     setIsCapturing(true);
+    
     try {
-      await new Promise(r => setTimeout(r, 400));
-      const dataUrl = await toPng(cardRef.current, {
+      // Ensure the profile image is fully loaded before we attempt to capture it
+      const img = cardRef.current.querySelector('img');
+      if (img && !img.complete) {
+        await new Promise((resolve) => {
+          img.onload = resolve;
+          img.onerror = resolve;
+        });
+      }
+
+      // Brief delay to allow mobile browsers to finish rendering any late layout shifts
+      await new Promise(r => setTimeout(r, 600));
+      
+      const options = {
         cacheBust: true,
         backgroundColor: '#ffffff',
-        pixelRatio: 3,
-        filter: (node) => {
+        pixelRatio: 2,
+        includeQueryParams: true,
+        style: {
+          // Flatten any active animations during the screenshot
+          transform: 'scale(1)',
+          transformOrigin: 'top left'
+        },
+        filter: (node: any) => {
           const element = node as HTMLElement;
+          // Don't include the interactive buttons in the saved PNG
           return element?.getAttribute?.('data-html2canvas-ignore') !== 'true';
         }
-      });
+      };
+
+      // Perform a double-pass capture (Common fix for asset skipping in Mobile Safari/Chrome)
+      await toPng(cardRef.current, options);
+      const dataUrl = await toPng(cardRef.current, options);
+      
       const link = document.createElement('a');
-      link.download = `HNY_2026_Wish.png`;
+      link.download = `HNY_2026_Mahi.png`;
       link.href = dataUrl;
+      document.body.appendChild(link);
       link.click();
+      document.body.removeChild(link);
+      
     } catch (err: any) {
       console.error('Save failed:', err);
-      alert("Note: Use a screenshot if the automatic save fails! ❤️");
+      // Fixed the "[object Object]" error by stringifying the error object
+      const errorMsg = err instanceof Error ? err.message : (typeof err === 'object' ? JSON.stringify(err) : String(err));
+      alert(`Oops! Saving failed: ${errorMsg}. Try taking a screenshot instead! ❤️`);
     } finally {
       setIsCapturing(false);
     }
@@ -67,77 +88,73 @@ const FinalWish: React.FC<FinalWishProps> = ({ onRestart }) => {
     <div className="w-full flex flex-col items-center justify-center min-h-[95dvh] py-4 px-4 touch-none">
       {showConfetti && <Confetti />}
       
+      {/* 
+          Main Greeting Card 
+          Designed to 100% match the visual aesthetic in the provided screenshot.
+      */}
       <div 
         ref={cardRef}
-        className="w-full max-w-[390px] bg-white grid-paper border border-[#4186F5]/20 flex flex-col items-center relative overflow-hidden pt-12 pb-8 px-6"
+        className="w-full max-w-[380px] bg-white border border-blue-50/50 flex flex-col items-center relative overflow-hidden pt-12 pb-10 px-6 shadow-[0_30px_60px_-15px_rgba(65,134,245,0.12)]"
         style={{ 
-          borderRadius: '1.5rem', 
-          boxShadow: '0 25px 50px -12px rgba(65, 134, 245, 0.15)',
-          minHeight: '600px'
+          borderRadius: '2.5rem', 
+          minHeight: '640px',
+          // Custom grid paper matching screenshot size exactly
+          backgroundImage: 'radial-gradient(#e5e7eb 1px, transparent 1px)',
+          backgroundSize: '24px 24px',
+          backgroundPosition: '12px 12px'
         }}
       >
-        {/* Main Content Area */}
-        <div className="flex-1 flex flex-col items-center w-full">
-          {/* Typography matching screenshot */}
-          <div className="text-center mb-4">
-            <h2 className="text-[42px] leading-tight text-slate-700 dancing-script" style={{ fontFamily: "'Dancing Script', cursive" }}>
-              Happy New Year
-            </h2>
-            <h3 className="text-[82px] font-medium text-[#4186F5] leading-none italic" style={{ fontFamily: "'Dancing Script', cursive" }}>
-              2026
-            </h3>
-          </div>
-          
-          {/* Central Image Container with Floating Decor */}
-          <div className="relative mt-8 mb-12">
-            {/* Floating Elements Positioned precisely like mockup */}
-            <div className="absolute -top-6 -left-12 text-2xl animate-[float_4s_infinite_ease-in-out] opacity-80 z-20" style={{ filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.1))' }}>
-              {ASSETS.PINK_HEART}
-            </div>
-            <div className="absolute top-12 -right-14 text-2xl animate-[float_3.5s_infinite_ease-in-out_0.5s] opacity-80 z-20">
-              {ASSETS.SPARKLES}
-            </div>
-            <div className="absolute top-36 -right-12 text-2xl animate-[float_4.5s_infinite_ease-in-out_1s] opacity-80 z-20">
-              {ASSETS.BOW}
-            </div>
-            <div className="absolute bottom-4 -left-14 text-2xl animate-[float_3.8s_infinite_ease-in-out_0.3s] opacity-80 z-20">
-              {ASSETS.HEART_SPARKLE}
-            </div>
-            <div className="absolute bottom-10 -left-6 text-2xl animate-[float_4s_infinite_ease-in-out_0.7s] opacity-80 z-20">
-              {ASSETS.CHEERS}
-            </div>
+        {/* Title Section */}
+        <div className="text-center w-full mb-2 z-10">
+          <h2 className="text-[40px] text-slate-600 dancing-script font-medium leading-tight mb-0" style={{ fontFamily: "'Dancing Script', cursive" }}>
+            Happy New Year
+          </h2>
+          <h3 className="text-[86px] font-bold text-[#4186F5] leading-[0.8] italic tracking-tighter" style={{ fontFamily: "'Dancing Script', cursive" }}>
+            2026
+          </h3>
+        </div>
+        
+        {/* Central Content Area (Image + Icons) */}
+        <div className="relative w-full flex-1 flex flex-col items-center justify-center py-6">
+          {/* Icons positioned exactly as per the user's screenshot */}
+          <div className="absolute top-[12%] left-[-10px] text-3xl animate-[float_4s_infinite_ease-in-out] select-none z-20 opacity-90">💖</div>
+          <div className="absolute top-[42%] right-[-15px] text-2xl animate-[float_3.5s_infinite_ease-in-out_0.5s] select-none z-20 opacity-90">✨</div>
+          <div className="absolute bottom-[28%] right-[-10px] text-2xl animate-[float_4.5s_infinite_ease-in-out_1s] select-none z-20 opacity-90">🎀</div>
+          <div className="absolute bottom-[10%] left-[-5px] text-3xl animate-[float_3.8s_infinite_ease-in-out_0.3s] select-none z-20 opacity-90">🥂</div>
+          <div className="absolute bottom-[0%] left-[-15px] text-3xl animate-[float_4s_infinite_ease-in-out_0.7s] select-none z-20 opacity-90">❤️</div>
 
-            {/* Central Circle */}
-            <div className="w-64 h-64 rounded-full bg-[#f8fafc] shadow-[inset_0_2px_10px_rgba(0,0,0,0.05)] border border-slate-100 flex items-center justify-center overflow-hidden relative group">
-              <img 
-                src={PROFILE_IMAGE} 
-                alt="Profile" 
-                className="w-full h-full object-cover animate-[subtleZoom_20s_infinite_alternate]"
-              />
-              <div className="absolute inset-0 ring-1 ring-inset ring-black/5 rounded-full pointer-events-none" />
-            </div>
-          </div>
-
-          {/* Footer Text precisely like mockup */}
-          <div className="mt-auto mb-10">
-            <p className="text-[#94a3b8] text-[9px] font-bold tracking-[0.4em] uppercase text-center opacity-80">
-              FROM KHUSHTER WITH 💗
-            </p>
+          {/* Central Circular Image */}
+          <div className="w-64 h-64 rounded-full bg-white shadow-[0_25px_50px_rgba(0,0,0,0.1)] border-[8px] border-white flex items-center justify-center overflow-hidden relative z-10">
+            <img 
+              src={imgError ? FALLBACK_IMAGE : PROFILE_IMAGE} 
+              alt="Profile" 
+              className="w-full h-full object-cover animate-[subtleZoom_25s_infinite_alternate]"
+              loading="eager"
+              crossOrigin="anonymous"
+              // @ts-ignore
+              fetchpriority="high"
+              onError={() => {
+                console.warn("Failed to load PROFILE_IMAGE, using fallback.");
+                setImgError(true);
+              }}
+            />
+            {/* Subtle overlay for better rendering depth */}
+            <div className="absolute inset-0 ring-1 ring-inset ring-black/5 rounded-full pointer-events-none" />
           </div>
         </div>
 
-        {/* Buttons (Excluded from Save) */}
-        <div className="w-full space-y-3" data-html2canvas-ignore="true">
+        {/* Interactive Buttons (Hidden in final PNG) */}
+        <div className="w-full space-y-3 mt-6" data-html2canvas-ignore="true">
           <div className="grid grid-cols-2 gap-3">
             <button 
               onClick={handleCelebrate}
-              className="bg-[#4186F5] hover:bg-blue-600 text-white py-4 rounded-xl font-bold text-[11px] uppercase tracking-widest transition-all shadow-md active:scale-95"
+              className="bg-[#4186F5] hover:bg-blue-600 text-white py-4 rounded-2xl font-black text-[11px] uppercase tracking-widest transition-all shadow-md active:scale-95"
             >
               CELEBRATE 🥳
             </button>
             <button 
               onClick={onRestart}
-              className="bg-slate-50 hover:bg-slate-100 text-slate-400 py-4 rounded-xl font-bold text-[11px] uppercase tracking-widest transition-all border border-slate-200 active:scale-95"
+              className="bg-slate-50 hover:bg-slate-100 text-slate-400 py-4 rounded-2xl font-black text-[11px] uppercase tracking-widest transition-all border border-slate-200 active:scale-95"
             >
               RESTART 🔄
             </button>
@@ -146,10 +163,10 @@ const FinalWish: React.FC<FinalWishProps> = ({ onRestart }) => {
           <button 
             onClick={handleSave}
             disabled={isCapturing}
-            className="w-full bg-white hover:bg-slate-50 text-slate-400 py-3.5 rounded-xl font-bold text-[9px] uppercase tracking-[0.2em] transition-all border border-slate-200 flex items-center justify-center gap-2"
+            className="w-full bg-white hover:bg-slate-50 text-slate-400 py-4 rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] transition-all border border-slate-200 flex items-center justify-center gap-2"
           >
             {isCapturing ? (
-              <div className="w-3 h-3 border-2 border-slate-200 border-t-[#4186F5] rounded-full animate-spin" />
+              <div className="w-4 h-4 border-2 border-slate-200 border-t-[#4186F5] rounded-full animate-spin" />
             ) : (
               <>SAVE CARD 📸</>
             )}
@@ -160,17 +177,11 @@ const FinalWish: React.FC<FinalWishProps> = ({ onRestart }) => {
       <style>{`
         @keyframes float {
           0%, 100% { transform: translateY(0) rotate(0deg); }
-          50% { transform: translateY(-10px) rotate(5deg); }
+          50% { transform: translateY(-12px) rotate(3deg); }
         }
         @keyframes subtleZoom {
           from { transform: scale(1); }
           to { transform: scale(1.1); }
-        }
-        .grid-paper {
-            background-size: 20px 20px;
-            background-image: 
-                linear-gradient(to right, #f1f5f9 1px, transparent 1px),
-                linear-gradient(to bottom, #f1f5f9 1px, transparent 1px);
         }
       `}</style>
     </div>

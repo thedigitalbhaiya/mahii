@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Snowfall from './components/Snowfall';
 import IntroCard from './components/IntroCard';
 import HeartGame from './components/HeartGame';
@@ -34,6 +34,37 @@ export enum AppStage {
 const App: React.FC = () => {
   const [stage, setStage] = useState<AppStage>(AppStage.INTRO);
   const [fade, setFade] = useState(true);
+  const [assetsLoaded, setAssetsLoaded] = useState(false);
+
+  // Critical images to preload for a smooth experience
+  const IMAGE_URLS = [
+    'https://yelling-beige-otdwf6myhv.edgeone.app/20251231_192633.png',
+    'https://yelling-beige-otdwf6myhv.edgeone.app/20251231_192653.png',
+    'https://yelling-beige-otdwf6myhv.edgeone.app/20251231_192708.png',
+    'https://yelling-beige-otdwf6myhv.edgeone.app/20251231_192722.png',
+    'https://yelling-beige-otdwf6myhv.edgeone.app/20251231_192744.png',
+    'https://yelling-beige-otdwf6myhv.edgeone.app/file_0000000032307209aad94d46f52251c9.png'
+  ];
+
+  useEffect(() => {
+    let loadedCount = 0;
+    IMAGE_URLS.forEach(url => {
+      const img = new Image();
+      img.src = url;
+      img.onload = () => {
+        loadedCount++;
+        if (loadedCount === IMAGE_URLS.length) {
+          setAssetsLoaded(true);
+        }
+      };
+      img.onerror = () => {
+        loadedCount++; // Count even errors to avoid getting stuck
+        if (loadedCount === IMAGE_URLS.length) {
+          setAssetsLoaded(true);
+        }
+      };
+    });
+  }, []);
 
   const transitionTo = (nextStage: AppStage) => {
     setFade(false);
@@ -46,6 +77,17 @@ const App: React.FC = () => {
   const handleRestart = () => {
     transitionTo(AppStage.INTRO);
   };
+
+  if (!assetsLoaded) {
+    return (
+      <div className="fixed inset-0 bg-white flex flex-col items-center justify-center p-8 text-center">
+        <div className="w-12 h-12 border-4 border-slate-100 border-t-pink-400 rounded-full animate-spin mb-4" />
+        <p className="text-slate-400 text-xs font-bold uppercase tracking-[0.3em] animate-pulse">
+          Preparing your surprise...
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="relative min-h-[100dvh] w-full flex items-center justify-center bg-gradient-to-b from-[#e0f2fe] to-white overflow-hidden px-4 py-8">
@@ -118,12 +160,14 @@ const App: React.FC = () => {
         )}
       </div>
 
-      {/* Minimal Footer Text - Clean Modern Typography */}
-      <div className="fixed bottom-[calc(0.75rem+env(safe-area-inset-bottom))] left-0 right-0 text-center pointer-events-none z-50">
-        <span className="text-slate-400 text-[10px] font-semibold tracking-[0.2em] uppercase opacity-50">
-          From Khushter with 💗
-        </span>
-      </div>
+      {/* Minimal Footer Text - Only visible before the final page */}
+      {stage !== AppStage.FINAL_WISH && (
+        <div className="fixed bottom-[calc(0.75rem+env(safe-area-inset-bottom))] left-0 right-0 text-center pointer-events-none z-50">
+          <span className="text-slate-400 text-[10px] font-semibold tracking-[0.2em] uppercase opacity-50">
+            From Khushter with 💗
+          </span>
+        </div>
+      )}
     </div>
   );
 };

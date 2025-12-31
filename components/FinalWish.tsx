@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState, useRef } from 'react';
 import Confetti from './Confetti';
 import { toPng } from 'html-to-image';
@@ -17,7 +18,8 @@ const FinalWish: React.FC<FinalWishProps> = ({ onRestart }) => {
   const FALLBACK_IMAGE = "https://cdn.pixabay.com/photo/2021/04/24/23/16/girl-6205216_1280.png";
 
   useEffect(() => {
-    const timer = setTimeout(() => setShowConfetti(false), 6000);
+    // Initial confetti burst
+    const timer = setTimeout(() => setShowConfetti(false), 8000);
     return () => clearTimeout(timer);
   }, []);
 
@@ -34,36 +36,37 @@ const FinalWish: React.FC<FinalWishProps> = ({ onRestart }) => {
     setIsCapturing(true);
     
     try {
-      // Ensure the profile image is fully loaded before we attempt to capture it
       const img = cardRef.current.querySelector('img');
-      if (img && !img.complete) {
-        await new Promise((resolve) => {
-          img.onload = resolve;
-          img.onerror = resolve;
-        });
+      if (img) {
+        // Essential for canvas capture of cross-domain images
+        img.crossOrigin = "anonymous";
+        if (!img.complete) {
+          await new Promise((resolve) => {
+            img.onload = resolve;
+            img.onerror = resolve;
+          });
+        }
       }
 
-      // Brief delay to allow mobile browsers to finish rendering any late layout shifts
-      await new Promise(r => setTimeout(r, 600));
+      // Small delay for font/asset stability
+      await new Promise(r => setTimeout(r, 1000));
       
       const options = {
         cacheBust: true,
         backgroundColor: '#ffffff',
         pixelRatio: 2,
-        includeQueryParams: true,
         style: {
-          // Flatten any active animations during the screenshot
           transform: 'scale(1)',
           transformOrigin: 'top left'
         },
         filter: (node: any) => {
           const element = node as HTMLElement;
-          // Don't include the interactive buttons in the saved PNG
+          // Hide UI buttons in the final image
           return element?.getAttribute?.('data-html2canvas-ignore') !== 'true';
         }
       };
 
-      // Perform a double-pass capture (Common fix for asset skipping in Mobile Safari/Chrome)
+      // Double pass for mobile browsers
       await toPng(cardRef.current, options);
       const dataUrl = await toPng(cardRef.current, options);
       
@@ -76,9 +79,11 @@ const FinalWish: React.FC<FinalWishProps> = ({ onRestart }) => {
       
     } catch (err: any) {
       console.error('Save failed:', err);
-      // Fixed the "[object Object]" error by stringifying the error object
-      const errorMsg = err instanceof Error ? err.message : (typeof err === 'object' ? JSON.stringify(err) : String(err));
-      alert(`Oops! Saving failed: ${errorMsg}. Try taking a screenshot instead! ❤️`);
+      let errorMsg = "Something went wrong.";
+      if (err instanceof Error) errorMsg = err.message;
+      else if (typeof err === 'object') errorMsg = JSON.stringify(err);
+      
+      alert(`Save failed: ${errorMsg}\nTry a screenshot if this continues! ❤️`);
     } finally {
       setIsCapturing(false);
     }
@@ -89,66 +94,81 @@ const FinalWish: React.FC<FinalWishProps> = ({ onRestart }) => {
       {showConfetti && <Confetti />}
       
       {/* 
-          Main Greeting Card 
-          Designed to 100% match the visual aesthetic in the provided screenshot.
+          Greeting Card 
+          Designed to 100% match the visual aesthetic: large blue 2026, 
+          script text, and exact emoji placements on a dot grid background.
       */}
       <div 
         ref={cardRef}
-        className="w-full max-w-[380px] bg-white border border-blue-50/50 flex flex-col items-center relative overflow-hidden pt-12 pb-10 px-6 shadow-[0_30px_60px_-15px_rgba(65,134,245,0.12)]"
+        className="w-full max-w-[380px] bg-white flex flex-col items-center relative overflow-hidden pt-14 pb-10 px-6 shadow-[0_50px_100px_-20px_rgba(0,0,0,0.1)]"
         style={{ 
-          borderRadius: '2.5rem', 
-          minHeight: '640px',
-          // Custom grid paper matching screenshot size exactly
-          backgroundImage: 'radial-gradient(#e5e7eb 1px, transparent 1px)',
+          borderRadius: '3rem', 
+          minHeight: '660px',
+          // Dot grid background as seen in the screenshot
+          backgroundImage: 'radial-gradient(#d1d5db 1px, transparent 1px)',
           backgroundSize: '24px 24px',
           backgroundPosition: '12px 12px'
         }}
       >
-        {/* Title Section */}
-        <div className="text-center w-full mb-2 z-10">
-          <h2 className="text-[40px] text-slate-600 dancing-script font-medium leading-tight mb-0" style={{ fontFamily: "'Dancing Script', cursive" }}>
+        {/* Title Section - Precise matching of typography */}
+        <div className="text-center w-full mb-4 z-10">
+          <h2 className="text-[44px] text-[#475569] dancing-script font-normal leading-none mb-1" style={{ fontFamily: "'Dancing Script', cursive" }}>
             Happy New Year
           </h2>
-          <h3 className="text-[86px] font-bold text-[#4186F5] leading-[0.8] italic tracking-tighter" style={{ fontFamily: "'Dancing Script', cursive" }}>
+          <h3 className="text-[100px] font-bold text-[#4186F5] leading-[0.7] italic tracking-tighter" style={{ fontFamily: "'Dancing Script', cursive" }}>
             2026
           </h3>
         </div>
         
-        {/* Central Content Area (Image + Icons) */}
-        <div className="relative w-full flex-1 flex flex-col items-center justify-center py-6">
-          {/* Icons positioned exactly as per the user's screenshot */}
-          <div className="absolute top-[12%] left-[-10px] text-3xl animate-[float_4s_infinite_ease-in-out] select-none z-20 opacity-90">💖</div>
-          <div className="absolute top-[42%] right-[-15px] text-2xl animate-[float_3.5s_infinite_ease-in-out_0.5s] select-none z-20 opacity-90">✨</div>
-          <div className="absolute bottom-[28%] right-[-10px] text-2xl animate-[float_4.5s_infinite_ease-in-out_1s] select-none z-20 opacity-90">🎀</div>
-          <div className="absolute bottom-[10%] left-[-5px] text-3xl animate-[float_3.8s_infinite_ease-in-out_0.3s] select-none z-20 opacity-90">🥂</div>
-          <div className="absolute bottom-[0%] left-[-15px] text-3xl animate-[float_4s_infinite_ease-in-out_0.7s] select-none z-20 opacity-90">❤️</div>
+        {/* Central Content Area */}
+        <div className="relative w-full flex-1 flex flex-col items-center justify-center py-8">
+          
+          {/* Exact Emoji Placements matching screenshot */}
+          {/* Top-ish Left Heart */}
+          <div className="absolute top-[8%] left-[0%] text-4xl animate-[float_4s_infinite_ease-in-out] z-20 pointer-events-none drop-shadow-sm">💖</div>
+          
+          {/* Mid-Right Sparkles */}
+          <div className="absolute top-[55%] right-[-10px] text-3xl animate-[float_3.5s_infinite_ease-in-out_0.5s] z-20 pointer-events-none drop-shadow-sm">✨</div>
+          
+          {/* Lower-Right Bow */}
+          <div className="absolute bottom-[20%] right-[-5px] text-3xl animate-[float_4.5s_infinite_ease-in-out_1s] z-20 pointer-events-none drop-shadow-sm">🎀</div>
+          
+          {/* Lower-Left Glasses */}
+          <div className="absolute bottom-[8%] left-[0%] text-4xl animate-[float_3.8s_infinite_ease-in-out_0.3s] z-20 pointer-events-none drop-shadow-sm">🥂</div>
+          
+          {/* Very Bottom-Left Heart */}
+          <div className="absolute bottom-[-5%] left-[-10px] text-3xl animate-[float_4s_infinite_ease-in-out_0.7s] z-20 pointer-events-none drop-shadow-sm">❤️</div>
 
-          {/* Central Circular Image */}
-          <div className="w-64 h-64 rounded-full bg-white shadow-[0_25px_50px_rgba(0,0,0,0.1)] border-[8px] border-white flex items-center justify-center overflow-hidden relative z-10">
+          {/* Portrait Image Circle - Fixed Rendering */}
+          <div className="w-64 h-64 rounded-full bg-white shadow-[0_20px_60px_rgba(0,0,0,0.08)] border-[10px] border-white flex items-center justify-center overflow-hidden relative z-10 ring-1 ring-slate-100">
             <img 
               src={imgError ? FALLBACK_IMAGE : PROFILE_IMAGE} 
-              alt="Profile" 
-              className="w-full h-full object-cover animate-[subtleZoom_25s_infinite_alternate]"
+              alt="Mahi" 
+              className="w-full h-full object-cover animate-[subtleZoom_30s_infinite_alternate]"
               loading="eager"
               crossOrigin="anonymous"
               // @ts-ignore
               fetchpriority="high"
-              onError={() => {
-                console.warn("Failed to load PROFILE_IMAGE, using fallback.");
+              onError={(e) => {
+                console.warn("Main image load failed, using fallback.");
                 setImgError(true);
               }}
+              onLoad={(e) => {
+                const target = e.target as HTMLImageElement;
+                if (target.naturalWidth === 0) setImgError(true);
+              }}
             />
-            {/* Subtle overlay for better rendering depth */}
-            <div className="absolute inset-0 ring-1 ring-inset ring-black/5 rounded-full pointer-events-none" />
+            {/* Soft inner vignette/ring */}
+            <div className="absolute inset-0 rounded-full shadow-[inset_0_0_20px_rgba(0,0,0,0.02)] pointer-events-none" />
           </div>
         </div>
 
-        {/* Interactive Buttons (Hidden in final PNG) */}
-        <div className="w-full space-y-3 mt-6" data-html2canvas-ignore="true">
+        {/* Action Buttons - Excluded from final saved image */}
+        <div className="w-full space-y-3 mt-8 z-20" data-html2canvas-ignore="true">
           <div className="grid grid-cols-2 gap-3">
             <button 
               onClick={handleCelebrate}
-              className="bg-[#4186F5] hover:bg-blue-600 text-white py-4 rounded-2xl font-black text-[11px] uppercase tracking-widest transition-all shadow-md active:scale-95"
+              className="bg-[#4186F5] hover:bg-blue-600 text-white py-4 rounded-2xl font-black text-[11px] uppercase tracking-widest transition-all shadow-lg active:scale-95"
             >
               CELEBRATE 🥳
             </button>
@@ -177,11 +197,11 @@ const FinalWish: React.FC<FinalWishProps> = ({ onRestart }) => {
       <style>{`
         @keyframes float {
           0%, 100% { transform: translateY(0) rotate(0deg); }
-          50% { transform: translateY(-12px) rotate(3deg); }
+          50% { transform: translateY(-15px) rotate(5deg); }
         }
         @keyframes subtleZoom {
           from { transform: scale(1); }
-          to { transform: scale(1.1); }
+          to { transform: scale(1.15); }
         }
       `}</style>
     </div>
